@@ -1,0 +1,4 @@
+celery
+pymysql
+requests
+beautifulsoup4

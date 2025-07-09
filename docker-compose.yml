@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:5.7
+    container_name: ettoday_mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: test
+      MYSQL_DATABASE: news_db
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: ettoday_phpmyadmin
+    restart: always
+    environment:
+      PMA_HOST: mysql
+      PMA_USER: root
+      PMA_PASSWORD: test
+    ports:
+      - "8000:80"
+    depends_on:
+      - mysql
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: ettoday_rabbitmq
+    restart: always
+    environment:
+      RABBITMQ_DEFAULT_USER: worker
+      RABBITMQ_DEFAULT_PASS: worker
+    ports:
+      - "5672:5672"   # 程式用連線 port
+      - "15672:15672" # 管理介面 UI port
+
+  flower:
+    image: mher/flower:latest
+    container_name: ettoday_flower
+    restart: always
+    environment:
+      - CELERY_BROKER_URL=amqp://worker:worker@rabbitmq:5672//
+    ports:
+      - "5555:5555"
+    depends_on:
+      - rabbitmq
+
+  worker:
+    build: .
+    container_name: ettoday_worker
+    restart: always
+    depends_on:
+      - rabbitmq
+      - mysql
+    environment:
+      - CELERY_BROKER_URL=amqp://worker:worker@rabbitmq:5672//
+
+
+volumes:
+  mysql_data:
